@@ -1,0 +1,5 @@
+<IfModule mod_rewrite.c>
+
+RewriteEngine on
+RewriteBase /
+RewriteRule ^/api/prefix/$ /api/?prefix=23 [R]
