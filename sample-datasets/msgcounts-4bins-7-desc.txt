@@ -1,0 +1,24 @@
+msgcounts columns:
+
+1 A's last 0-30min
+2 W's last 0-30min
+3 A's last 30-60min
+4 W's last 30-60min
+5 A's last 60-90min
+6 W's last 60-90min
+7 A's last 90-120min
+8 W's last 90-120min
+9 A's next 0-30min
+10 W's next 0-30min
+11 A's next 30-60min
+12 W's next 30-60min
+13 A's next 60-90min
+14 W's next 60-90min
+15 A's next 90-120min
+16 W's next 90-120min
+17-# of differnt Peers sending updates in last 120min
+18-# of differnt Peers sending updates in next 120min
+19-# seconds till next outage (Inf if no next outage)
+
+outages-*.txt contains 0,1 for outage if happened within next 30min
+prefixes-*.txt contains prefix id corresponding to each row of the matrix

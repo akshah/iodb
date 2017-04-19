@@ -1,0 +1,58 @@
+  1 /*
+  2 To create the database, run this file through psql like so:
+  3 prompt> psql -f 0_pph_createTables.postgresql bgpmon_db bgpmon_db_user
+  4 */
+  5
+  6 /* pph = peer, prefix history */
+  7 drop schema if exists pph cascade;
+  8 create schema pph;
+  9
+ 10
+ 11 CREATE TABLE pph.rib_import(
+ 12     peer INET,
+ 13     collector VARCHAR(30),
+ 14     prefix CIDR,
+ 15     ts TIMESTAMP WITHOUT TIME ZONE,
+ 16     origin INTEGER,
+ 17     lasthop INTEGER,
+ 18     aspath INTEGER ARRAY
+ 19 );
+ 20 CREATE TABLE pph.update_import(
+ 21     peer INET,
+ 22     collector VARCHAR(30),
+ 23     prefix CIDR,
+ 24         update BOOLEAN,
+ 25     ts TIMESTAMP WITHOUT TIME ZONE,
+ 26     origin VARCHAR,
+ 27     lasthop VARCHAR,
+ 28     aspath VARCHAR ARRAY
+ 29 );
+ 30
+ 31
+ 32 CREATE TABLE pph.prefixes (
+ 33     pref CIDR UNIQUE NOT NULL,
+ 34     dbid SERIAL NOT NULL,
+ 35     PRIMARY KEY (dbid)
+ 36 );
+ 37
+ 38 CREATE TABLE pph.peers (
+ 39     dbid SERIAL NOT NULL,
+ 40     name VARCHAR(30),
+ 41     addr INET NOT NULL,
+ 42     collector VARCHAR(30) NOT NULL,
+ 43         UNIQUE(addr,collector),
+ 44     PRIMARY KEY (dbid)
+ 45 );
+ 46 create index peers_n1 on pph.peers (addr,collector);
+ 47
+ 48 CREATE TABLE pph.ppms (
+ 49     dbid SERIAL NOT NULL,
+ 50     peer_dbid INTEGER NOT NULL,
+ 51     prefix_dbid INTEGER NOT NULL,
+ 52     last_timerange_dbid INTEGER NULL,
+ 53     prefix_safi INTEGER,
+ 54     PRIMARY KEY (dbid),
+ 55         UNIQUE(prefix_dbid,peer_dbid),
+ 56     FOREIGN KEY(peer_dbid) REFERENCES pph.peers (dbid),
+~/bgpmon-tools/BGPmon-Analytics-db/bin/bgpmon_analytics_db_0_pphTables.psql [FORMAT=unix] [TYPE=] [ASCII=000] [HEX=00] [POS=0001,0004] [1%] [LEN=70]
+-- VISUAL LINE --

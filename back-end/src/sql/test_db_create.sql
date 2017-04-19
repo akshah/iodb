@@ -1,0 +1,174 @@
+DROP DATABASE IF EXISTS test_outage;
+CREATE DATABASE IF NOT EXISTS test_outage;
+use test_outage;
+
+-- DataSet Table
+DROP TABLE IF EXISTS DataSet;
+CREATE TABLE DataSet (
+	id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        FromFile VARCHAR(255) NOT NULL,
+        Descr VARCHAR(255),
+	ImportDate DATETIME NOT NULL,
+        CollectDate DATETIME NOT NULL,
+	CollectedFromID TINYINT NOT NULL,
+	INDEX(CollectDate),	
+	PRIMARY KEY (id) );
+
+-- CollectedFrom Table
+DROP TABLE IF EXISTS CollectedFrom;
+CREATE TABLE CollectedFrom (
+	ID TINYINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	SourceName varchar(16) NOT NULL, 
+	PRIMARY KEY (id) );
+
+-- OriginTable Table
+DROP TABLE IF EXISTS OriginTable;
+CREATE TABLE OriginTable (
+	id TINYINT UNSIGNED NOT NULL AUTO_INCREMENT, 
+	origin VARCHAR(10) NOT NULL,
+	PRIMARY KEY (id) );
+
+-- AggrTable Table
+DROP TABLE IF EXISTS AggrTable;
+CREATE TABLE AggrTable (
+	id TINYINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	aggr VARCHAR(3) NOT NULL,
+	PRIMARY KEY (id) );
+
+-- Message Table
+DROP TABLE IF EXISTS Message; 
+CREATE TABLE Message ( 
+        MsgID INT UNSIGNED NOT NULL AUTO_INCREMENT,
+	DataSetID INT NOT NULL REFERENCES DataSet(id), 
+	BGPVersionID TINYINT NOT NULL,
+        MsgType CHAR(1) NOT NULL,
+        MsgTime DATETIME NOT NULL,
+        PeerIPID MEDIUMINT UNSIGNED,
+        PeerAS MEDIUMINT UNSIGNED,
+	PrefixID MEDIUMINT UNSIGNED,
+	PrefixMask TINYINT UNSIGNED,
+	MsgPathID INT UNSIGNED,
+	OriginID TINYINT REFERENCES OriginTable(id),
+	NextHopID MEDIUMINT UNSIGNED,
+	Med INT UNSIGNED,
+	CommunityID INT UNSIGNED,
+        AggregateID TINYINT REFERENCES AggrTable(id),
+ 	AggregateIPID MEDIUMINT UNSIGNED,
+	INDEX(DataSetID),
+	INDEX(MsgTime),
+	INDEX(MsgPathID),
+	INDEX(CommunityID),
+	INDEX(MsgType),
+	PRIMARY KEY(MsgID) );
+
+-- MsgPath Table
+DROP TABLE IF EXISTS MsgPath;
+CREATE TABLE MsgPath (
+	id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+ 	MsgPathID INT UNSIGNED NOT NULL,
+        PathOrder TINYINT NOT NULL,
+        ASN MEDIUMINT UNSIGNED,
+        Alternative BIT NOT NULL,
+	INDEX(MsgPathID),
+	INDEX(PathOrder),
+	INDEX(ASN),
+     	PRIMARY KEY(id) );
+
+-- IPTable Table 
+DROP TABLE IF EXISTS IPTable;
+CREATE TABLE IPTable (
+	id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+	ipval BIGINT UNSIGNED,
+	IP VARCHAR(16),
+	INDEX(IP),
+	PRIMARY KEY (id) );
+
+DROP TABLE IF EXISTS BGPVersion;
+CREATE TABLE BGPVersion (
+	id TINYINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	protocol VARCHAR(5),
+	PRIMARY KEY (id) );
+
+
+DROP TABLE IF EXISTS Community;
+CREATE TABLE Community (
+	id INT UNSIGNED	NOT NULL AUTO_INCREMENT,
+	CommunityID INT UNSIGNED NOT NULL,
+	PathOrder TINYINT NOT NULL,
+	CommunityAS MEDIUMINT UNSIGNED NOT NULL,
+	LocalPref MEDIUMINT UNSIGNED,
+	INDEX(CommunityID),
+	INDEX(PathOrder),
+	INDEX(CommunityAS),
+	PRIMARY KEY (id) );
+
+DROP TABLE IF EXISTS GeoInfo;
+CREATE TABLE GeoInfo (
+	GeoID INT UNSIGNED NOT NULL AUTO_INCREMENT,
+ 	IPBlock VARCHAR(16) NOT NULL,
+	Country VARCHAR(255),
+    Region VARCHAR(255),
+	City VARCHAR(255),
+    Lattitude FLOAT,
+	Longitude FLOAT,
+	PRIMARY KEY(GeoID) );
+
+DROP TABLE IF EXISTS PingOutage;
+CREATE TABLE PingOutage (
+	OutageID INT UNSIGNED NOT NULL AUTO_INCREMENT,
+ 	IPBlock VARCHAR(16) NOT NULL,
+	BlockAggr VARCHAR(25) NOT NULL,
+	OutageStart DATETIME NOT NULL,
+	OutageEnd DATETIME NOT NULL,
+	PRIMARY KEY(OutageID) );
+
+DROP TABLE IF EXISTS OutageInfo;
+CREATE TABLE OutageInfo (
+	InfoID INT UNSIGNED NOT NULL AUTO_INCREMENT,
+	OutageID INT UNSIGNED NOT NULL,
+	PeerIP VARCHAR(25)  NOT NULL,
+	BGP_LPM VARCHAR(25) NOT NULL,
+	PRIMARY KEY(InfoID) );
+
+DROP TABLE IF EXISTS LookupTable;
+CREATE TABLE LookupTable (
+	LookupID INT UNSIGNED NOT NULL AUTO_INCREMENT,
+	RIB_Time VARCHAR(25) NOT NULL,
+	PeerIP VARCHAR(16) NOT NULL,
+	Prefix VARCHAR(25)  NOT NULL,
+	PRIMARY KEY(LookupID) );
+-- insert values for complimentary tables --------------------
+
+-- locations collected from
+INSERT INTO CollectedFrom VALUES(NULL,'rv2');
+INSERT INTO CollectedFrom VALUES(NULL,'rv4');
+INSERT INTO CollectedFrom VALUES(NULL,'eqix');
+INSERT INTO CollectedFrom VALUES(NULL,'isc');
+INSERT INTO CollectedFrom VALUES(NULL,'jinx');
+INSERT INTO CollectedFrom VALUES(NULL,'kixp');
+INSERT INTO CollectedFrom VALUES(NULL,'linx');
+INSERT INTO CollectedFrom VALUES(NULL,'saopaulo');
+INSERT INTO CollectedFrom VALUES(NULL,'sydney');
+INSERT INTO CollectedFrom VALUES(NULL,'wide');
+INSERT INTO CollectedFrom VALUES(NULL,'telxatl');
+INSERT INTO CollectedFrom VALUES(NULL,'isi-ant');
+
+-- how BGP information was learned
+INSERT INTO OriginTable VALUES(NULL,'IGP');
+INSERT INTO OriginTable VALUES(NULL,'INCOMPLETE');
+INSERT INTO OriginTable VALUES(NULL,'EGP');
+INSERT INTO OriginTable VALUES(NULL,'ERR'); -- error
+
+-- not aggregated (NAG) or aggregated (AG)
+INSERT INTO AggrTable VALUES(NULL,'NAG');
+INSERT INTO AggrTable VALUES(NULL,'AG');
+INSERT INTO AggrTable VALUES(NULL,'ERR');  -- error
+
+-- BGP Protocol version
+INSERT INTO BGPVersion VALUES(NULL,'BGP');
+INSERT INTO BGPVersion VALUES(NULL,'BGP4');
+INSERT INTO BGPVersion VALUES(NULL,'BGP4MP');
+INSERT INTO BGPVersion VALUES(NULL,'ERR');
+
+-- To Populate LookupTable. Run this after More BGP Data is added
+-- use bgpdata; INSERT INTO LookupTable SELECT DISTINCT Message.PrefixID,IPTable.ip,Message.PrefixMask FROM Message INNER JOIN `IPTable` on Message.PrefixID=IPTable.id;

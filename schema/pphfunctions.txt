@@ -1,0 +1,58 @@
+  1 /*Script to redefine the functions used for the 6watch database
+  2 run like so: " > psql -f 1_import_functions dbname dbuser"*/
+  3
+  4 /*Helper function to dynamically generate a peer's table name*/
+  5 DROP FUNCTION IF EXISTS pph.generate_peer_table_name(INET,VARCHAR);
+  6 DROP FUNCTION IF EXISTS pph.add_or_lookup_peer(INET,VARCHAR);
+  7 DROP FUNCTION IF EXISTS pph.add_or_lookup_prefix(CIDR);
+  8 DROP FUNCTION IF EXISTS pph.add_or_lookup_ppm(INET,VARCHAR,CIDR);
+  9 DROP FUNCTION IF EXISTS pph.add_new_timerange(INET,VARCHAR,CIDR,BOOL,TIMESTAMP,
+ 10                                               VARCHAR,VARCHAR,VARCHAR ARRAY);
+ 11
+ 12 /******************************************************************************
+ 13  * generate_peer_table_name
+ 14  * input: peer and collector
+ 15  * output: the name of an individual peer's timerange
+ 16  * effects:
+ 17  ******************************************************************************/
+ 18 CREATE OR REPLACE FUNCTION pph.generate_peer_table_name(INET,VARCHAR)
+ 19   RETURNS VARCHAR AS $$
+ 20 BEGIN
+ 21   RETURN 'pph.' || $2 || '_' || host($1);
+ 22 END;
+ 23 $$  LANGUAGE plpgsql;
+ 24
+ 25 /******************************************************************************
+ 26  * add_or_lookup_peer
+ 27  * This function takes as input a peer's address (single-quoted strings are fine
+ 28  * as Postgres will implicitly convert it to INET), checks to see if the peer
+ 29  * is already
+ 30  * in the database, adds it if it is not, and returns the dbid of the peer.
+ 31  ******************************************************************************/
+ 32 CREATE OR REPLACE FUNCTION pph.add_or_lookup_peer(INET,VARCHAR)
+ 33   RETURNS INTEGER AS $$
+ 34 DECLARE
+ 35   peer_id INTEGER;
+ 36   peer_table VARCHAR;
+ 37 BEGIN
+ 38   SELECT dbid INTO peer_id FROM pph.peers WHERE addr = $1 AND collector = $2;
+ 39   IF NOT FOUND THEN
+ 40     INSERT INTO pph.peers (addr,collector) VALUES ($1,$2)
+ 41       RETURNING dbid INTO peer_id;
+ 42     peer_table := pph.generate_peer_table_name($1,$2);
+ 43     EXECUTE 'CREATE TABLE '||quote_ident(peer_table)||
+ 44             ' () INHERITS (pph.timeranges)';
+ 45     EXECUTE 'CREATE INDEX "'||peer_table||'_start_time_index" ON '||
+ 46             quote_ident(peer_table)||' (start_time)';
+ 47     EXECUTE 'CREATE INDEX "'||peer_table||'_end_time_index" ON '||
+ 48             quote_ident(peer_table)||' (end_time)';
+ 49     EXECUTE 'CREATE INDEX "'||peer_table||'_ppm_dbid_index" ON '||
+ 50             quote_ident(peer_table)||' (ppm_dbid)';
+ 51     EXECUTE 'CREATE INDEX "'||peer_table||'_dbid_index" ON '||
+ 52             quote_ident(peer_table)||' (dbid)';
+ 53   END IF;
+ 54   RETURN peer_id;
+ 55 END;
+ 56 $$  LANGUAGE plpgsql;
+~/bgpmon-tools/BGPmon-Analytics-db/bin/bgpmon_analytics_db_1_pphFunctions.psql [FORMAT=unix] [TYPE=] [ASCII=047] [HEX=2F] [POS=0001,0001] [0%] [LEN=254]
+"bgpmon_analytics_db_1_pphFunctions.psql" 254L, 10577C

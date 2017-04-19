@@ -1,0 +1,58 @@
+  1 /*Script to redefine the functions used for the 6watch database
+  2 run like so: " > psql -f 1_import_functions dbname dbuser"*/
+  3
+  4 /*Helper function to dynamically generate a peer's table name*/
+  5
+  6 DROP FUNCTION IF EXISTS pph.find_most_active_prefix();
+  7 DROP FUNCTION IF EXISTS pph.get_prefixes_per_as(INTEGER);
+  8 DROP FUNCTION IF EXISTS pph.get_as_per_prefix(CIDR);
+  9 DROP FUNCTION IF EXISTS pph.get_table_growth(INET,VARCHAR,TIMESTAMP,TIMESTAMP,
+ 10                                          INTERVAL);
+ 11 DROP FUNCTION IF EXISTS pph.get_table_at_time(INET,VARCHAR,TIMESTAMP);
+ 12 DROP FUNCTION IF EXISTS pph.get_unique_prefix_growth(INET,VARCHAR,TIMESTAMP,
+ 13                                                  TIMESTAMP,INTERVAL);
+ 14 DROP FUNCTION IF EXISTS pph.get_unique_prefixes_at_time(INET,VARCHAR,TIMESTAMP);
+ 15
+ 16
+ 17 /*Dropping functions with old data types from previous schemas*/
+ 18 DROP FUNCTION IF EXISTS pph.get_prefixes_per_as(INTEGER);
+ 19 DROP FUNCTION IF EXISTS pph.get_prefixes_per_as(BIGINT);
+ 20 DROP FUNCTION IF EXISTS pph.get_prefixes_per_as(VARCHAR);
+ 21
+ 22
+ 23 /******************************************************************************
+ 24  * find_most_active_prefix
+ 25  * input:
+ 26  * output: returns prefix
+ 27  * effects: find the prefix withthe most timerange entries (across all peers)
+ 28  ******************************************************************************/
+ 29 CREATE OR REPLACE FUNCTION pph.find_most_active_prefix() RETURNS CIDR AS $$
+ 30 DECLARE
+ 31   p CURSOR FOR SELECT * FROM pph.prefixes;
+ 32   top_pref CIDR;
+ 33   top_count INTEGER = 0;
+ 34   curr_count INTEGER = 0;
+ 35 BEGIN
+ 36   FOR prefix IN p LOOP
+ 37     EXECUTE 'SELECT COUNT(1)
+ 38     FROM pph.timeranges AS t, pph.ppms AS p1, pph.prefixes AS p2
+ 39     WHERE p2.pref = '''||prefix.pref||''' AND
+ 40         p2.dbid = p1.prefix_dbid AND
+ 41         t.ppm_dbid = p1.dbid' INTO curr_count;
+ 42     IF curr_count > top_count THEN
+ 43         top_count = curr_count;
+ 44         top_pref = prefix.pref;
+ 45     END IF;
+ 46   END LOOP;
+ 47   RETURN top_pref;
+ 48 END;
+ 49 $$ LANGUAGE plpgsql;
+ 50
+ 51 /******************************************************************************
+ 52  * get_prefixes_per_as
+ 53  * input: ASN
+ 54  * output: set of prefixes
+ 55  * effects:
+ 56  ******************************************************************************/
+~/bgpmon-tools/BGPmon-Analytics-db/bin/bgpmon_analytics_db_2_pphQueryFuncs.psql [FORMAT=unix] [TYPE=] [ASCII=047] [HEX=2F] [POS=0001,0001] [0%] [LEN=180]
+"bgpmon_analytics_db_2_pphQueryFuncs.psql" 180L, 6694C
